@@ -52,6 +52,7 @@ jobs:
             exit 0
           fi
 
+          echo "new_version=true" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
 
