@@ -1,0 +1,99 @@
+name: Brave OLED Build
+
+on:
+  schedule:
+    - cron: "12 3 * * 0" # Tweaked time
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Brave (Beta) Version (e.g. 1.81.119). DO NOT include 'v'"
+
+permissions:
+  contents: write
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version_available: ${{ steps.check_releases.outputs.new_version }}
+      tag: ${{ steps.last.outputs.tag }}
+      apk_url: ${{ steps.last.outputs.apk_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for updates
+        id: check_updates
+        run: |-
+          export REQUESTED_VERSION="${{ github.event.inputs.version }}"
+          export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
+          echo "-- Finding the latest brave beta"
+          capture_output=$(ruby "./scripts/get_brave_latest_beta.rb")
+          if [ $? -ne 0]; then
+            echo "[ERROR] Failed to query version"
+            exit 1
+          fi
+          # First line is tag, second line is download URL
+          TAG=$(echo "${capture_output}" | head -n 1)
+          APK_URL=$(echo "${capture_output}" | tail -n 1)
+
+          echo "[NOTE] tag: $TAG"
+          echo "[NOTE] apk: $APK_URL"
+
+          # Try to get the latest tag of this repo
+          LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/tags" \
+            | jq -r '.[0].name')
+          echo "[INFO] Input Version: $INPUT_VERSION"
+          echo "[INFO] Latest Tag: $LATEST_TAG"
+
+          if [ "v$INPUT_VERSION" = "$LATEST_TAG" ]; then
+            echo "[INFO] Input version and latest tag are the same. Skipping."
+            echo "new_version=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
+
+  build:
+    needs: check-update
+    if: needs.check-update.outputs.new_version_available == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 24
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt install -y wget zipalign apksigner jq
+
+      - name: Download upstream APK
+        run: wget -q "${{ needs.check-update.outputs.apk_url }}" -O brave.apk
+
+      - name: Build and patch
+        run: bash build.sh
+
+      - name: Sign APK
+        run: |
+          mv brave-signed.apk brave-${{ needs.check-update.outputs.tag }}-oled.apk
+          echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
+          apksigner sign \
+            --ks keystore.jks \
+            --ks-pass pass:${{ secrets.KEYSTORE_PASSPHRASE }} \
+            --key-pass pass:${{ secrets.KEY_PASSWORD }} \
+            brave-${{ needs.check-update.outputs.tag }}-oled.apk
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.check-update.outputs.tag }}
+          files: brave-${{ needs.check-update.outputs.tag }}-oled.apk
+          body: |
+            ## Brave patched: ${{ needs.check-update.outputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
