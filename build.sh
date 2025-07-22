@@ -11,6 +11,8 @@ else
 	echo "[INFO] Downloading apktool"
 	wget -q https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.12.0.jar -O apktool.jar
 
+	echo "[INFO] apktool version $(java -jar apktool.jar -version)"
+
 	echo "[INFO] Decompiling Brave browser APK"
 	java -jar apktool.jar d brave.apk -r -o $EXTRACTED
 
@@ -43,7 +45,7 @@ java -jar apktool.jar b b-ex -o b-patched.apk
 
 # Align and sign the APK
 echo "[INFO] Aligning the APK"
-zipalign 4 b-patched.apk b-signed.apk
+zipalign -p -f 4 b-patched.apk b-signed.apk
 
 # Clean up
 rm -rf b-patched.apk
