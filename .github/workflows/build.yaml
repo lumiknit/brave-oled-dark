@@ -15,7 +15,7 @@ jobs:
   check-update:
     runs-on: ubuntu-latest
     outputs:
-      new_version_available: ${{ steps.check_releases.outputs.new_version }}
+      new_version_available: ${{ steps.last.outputs.new_version }}
       tag: ${{ steps.last.outputs.tag }}
       apk_url: ${{ steps.last.outputs.apk_url }}
     steps:
@@ -43,11 +43,10 @@ jobs:
           LATEST_TAG=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/tags" \
             | jq -r '.[0].name')
-          echo "[INFO] Input Version: $INPUT_VERSION"
           echo "[INFO] Latest Tag: $LATEST_TAG"
 
-          if [ "v$INPUT_VERSION" = "$LATEST_TAG" ]; then
-            echo "[INFO] Input version and latest tag are the same. Skipping."
+          if [ "v$TAG" = "$LATEST_TAG" ]; then
+            echo "[INFO] tag and latest tag are the same. Skipping."
             echo "new_version=false" >> $GITHUB_OUTPUT
             exit 0
           fi
