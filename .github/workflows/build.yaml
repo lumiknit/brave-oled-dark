@@ -80,6 +80,7 @@ jobs:
 
       - name: Sign APK
         run: |
+          ls
           mv b-signed.apk brave-${{ needs.check-update.outputs.tag }}-oled.apk
           echo "${{ secrets.KEYSTORE }}" | base64 -di > keystore.jks
           apksigner sign \
