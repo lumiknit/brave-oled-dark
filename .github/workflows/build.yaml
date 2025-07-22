@@ -15,9 +15,9 @@ jobs:
   check-update:
     runs-on: ubuntu-latest
     outputs:
-      new_version_available: ${{ steps.last.outputs.new_version }}
-      tag: ${{ steps.last.outputs.tag }}
-      apk_url: ${{ steps.last.outputs.apk_url }}
+      new_version_available: ${{ steps.check_updates.outputs.new_version }}
+      tag: ${{ steps.check_updates.outputs.tag }}
+      apk_url: ${{ steps.check_updates.outputs.apk_url }}
     steps:
       - uses: actions/checkout@v4
 
