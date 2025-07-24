@@ -11,31 +11,58 @@
 # - In LSk3, there is onScroll method, and it contains 0x3 to indicate 'down' swipe.
 #   - Change it to 0x4 to indicate 'up' swipe.
 
-src_smali = "smali_classes2/org/chromium/chrome/browser/toolbar/bottom/BraveScrollingBottomViewResourceFrameLayout.smali"
+def find_smali_path(rest)
+  smali_class_paths = [
+    "smali_classes2",
+    "smali",
+  ]
 
-src = File.read(src_smali)
+  for path in smali_class_paths
+    full_path = "#{path}/#{rest}"
+    if File.exist?(full_path)
+      puts "[INFO] Found smali path: #{full_path}"
+      return full_path
+    else
+      puts "[INFO] Could not find smali path: #{full_path}"
+    end
+  end
+end
+
+# Find layout file
+layout_path = find_smali_path(
+  "org/chromium/chrome/browser/toolbar/bottom/BraveScrollingBottomViewResourceFrameLayout.smali"
+)
+if layout_path.nil?
+  puts "[ERROR] Could not find the layout file path."
+  exit 1
+end
+
+layout_contents = File.read(layout_path)
 
 # Find:
 # invoke-virtual {v0, p1}, L(<class>);->a(Landroid/view/MotionEvent;)Z
 
 re = /invoke-virtual {v0, p1}, L([^;]+);->a\(Landroid\/view\/MotionEvent;\)Z/
-matched = src.match(re)
+matched = layout_contents.match(re)
 
 if matched.nil?
-  puts "[ERROR] Could not find the method in #{src_smali}"
+  puts "[ERROR] Could not find the method in #{layout_path}"
   exit 1
 end
 
-puts "[INFO] Found class: #{matched[1]}"
-
 class_name = matched[1]
+puts "[INFO] Found class: #{class_name}"
 
-target_file = "smali_classes2/#{class_name}.smali"
+class_path = find_smali_path(
+  "#{class_name}.smali"
+)
+class_contents = File.read(class_path)
 
-# Read file as binary
-$contents = File.read(target_file)
+method_start_phrase = ".method public final onScroll(Landroid/view/MotionEvent;Landroid/view/MotionEvent;FF)Z"
+method_end_phrase = ".end method"
 
-_method_start_phrase = ".method public final onScroll(Landroid/view/MotionEvent;Landroid/view/MotionEvent;FF)Z"
+method_start_idx = class_contents.index(method_start_phrase)
+method_end_idx = class_contents.index(method_end_phrase, method_start_idx)
 
 # After the method start, find the line with const/4 p1, 0x3
 original = """
@@ -51,13 +78,13 @@ replacement = """
 """
 
 # Replace the original line with the new line
-c = $contents.gsub!(original, replacement)
+c = class_contents.gsub!(original, replacement)
 if c.nil?
-  puts "[ERROR] Could not find the original line in #{target_file}"
+  puts "[ERROR] Could not find the original line in #{class_path}"
   exit 1
 else
-  puts "[INFO] Replaced the line in #{target_file}"
+  puts "[INFO] Replaced the line in #{class_path}"
 end
 
 # Write the modified contents back to the file
-File.write(target_file, $contents)
+File.write(class_path, class_contents)
