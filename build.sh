@@ -36,6 +36,7 @@ function patch() {
 echo "[INFO] Patching resources"
 
 patch ../patches/0000-black.rb
+patch ../patches/0001-bottom_toolbar_swipe_up.rb
 
 popd
 

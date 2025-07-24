@@ -2,7 +2,7 @@ name: Brave OLED Build
 
 on:
   schedule:
-    - cron: "12 3 * * 0" # Tweaked time
+    - cron: "12 3 * * *" # Tweaked time
   workflow_dispatch:
     inputs:
       version:
