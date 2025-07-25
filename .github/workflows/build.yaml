@@ -28,7 +28,7 @@ jobs:
           export GITHUB_TOKEN="${{ secrets.GITHUB_TOKEN }}"
           echo "-- Finding the latest brave beta"
           capture_output=$(ruby "./scripts/get_brave_latest_beta.rb")
-          if [ $? -ne 0]; then
+          if [ $? -ne 0 ]; then
             echo "[ERROR] Failed to query version"
             exit 1
           fi
@@ -45,7 +45,7 @@ jobs:
             | jq -r '.[0].name')
           echo "[INFO] Latest Tag: $LATEST_TAG"
 
-          if [ "v$TAG" = "$LATEST_TAG" ]; then
+          if [ "$TAG" = "$LATEST_TAG" ]; then
             echo "[INFO] tag and latest tag are the same. Skipping."
             echo "new_version=false" >> $GITHUB_OUTPUT
             exit 0
