@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+require_relative 'helpers'
+
 # 0001: Change bottom toolbar swipe up for open tab list.
 # Note: Original brave browser should swipe 'down' to open the tab list, even for the bottom toolbar.
 
@@ -11,25 +13,8 @@
 # - In LSk3, there is onScroll method, and it contains 0x3 to indicate 'down' swipe.
 #   - Change it to 0x4 to indicate 'up' swipe.
 
-def find_smali_path(rest)
-  smali_class_paths = [
-    "smali_classes2",
-    "smali",
-  ]
-
-  for path in smali_class_paths
-    full_path = "#{path}/#{rest}"
-    if File.exist?(full_path)
-      puts "[INFO] Found smali path: #{full_path}"
-      return full_path
-    else
-      puts "[INFO] Could not find smali path: #{full_path}"
-    end
-  end
-end
-
 # Find layout file
-layout_path = find_smali_path(
+layout_path = PatchHelpers.find_smali_path(
   "org/chromium/chrome/browser/toolbar/bottom/BraveScrollingBottomViewResourceFrameLayout.smali"
 )
 if layout_path.nil?
@@ -53,7 +38,7 @@ end
 class_name = matched[1]
 puts "[INFO] Found class: #{class_name}"
 
-class_path = find_smali_path(
+class_path = PatchHelpers.find_smali_path(
   "#{class_name}.smali"
 )
 class_contents = File.read(class_path)
@@ -78,12 +63,15 @@ replacement = """
 """
 
 # Replace the original line with the new line
-c = class_contents.gsub!(original, replacement)
-if c.nil?
-  puts "[ERROR] Could not find the original line in #{class_path}"
+success = PatchHelpers.replace_text_pattern(
+  class_contents,
+  original,
+  replacement,
+  "swipe direction pattern in #{class_path}"
+)
+
+unless success
   exit 1
-else
-  puts "[INFO] Replaced the line in #{class_path}"
 end
 
 # Write the modified contents back to the file
